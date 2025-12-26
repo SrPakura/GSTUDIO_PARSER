@@ -1,11 +1,11 @@
 /* =========================================
-   AERKO_ LOG CLEANER // CORE LOGIC
+   AERKO_ LOG CLEANER // CORE LOGIC v2.0
    ========================================= */
 
 // --- VARIABLES GLOBALES ---
-let rawData = null; // El JSON crudo
-let processedText = ""; // El texto final limpio
-let stats = { total: 0, omitted: 0, thoughts: 0 };
+let rawData = null;
+let processedText = "";
+let stats = { total_pairs: 0, omitted: 0, thoughts: 0 };
 
 // --- DOM ELEMENTS ---
 const elements = {
@@ -50,7 +50,7 @@ elements.fileInput.addEventListener('change', (e) => {
     if(e.target.files.length > 0) handleFile(e.target.files[0]);
 });
 
-// 2. Live Preview (Cualquier cambio en inputs regenera la vista)
+// 2. Live Preview
 const inputs = [elements.nameUser, elements.nameModel, elements.headerText, elements.omitIds, elements.thoughtStart, elements.thoughtEnd];
 inputs.forEach(input => input.addEventListener('input', processAndRender));
 
@@ -66,39 +66,45 @@ function handleFile(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            // Intentamos parsear sea cual sea la extensión
             const json = JSON.parse(e.target.result);
-            
-            // Verificación básica de estructura AI Studio
             if (!json.chunkedPrompt || !json.chunkedPrompt.chunks) {
                 throw new Error("Estructura JSON no válida (Falta chunkedPrompt)");
             }
-
             rawData = json;
             
-            // UI Update
             elements.fileStatus.style.display = 'block';
             elements.fileStatus.innerText = `> ARCHIVO CARGADO: ${file.name}`;
+            elements.fileStatus.style.color = 'var(--acid)';
             elements.configSection.classList.remove('disabled-state');
             elements.exportSection.classList.remove('disabled-state');
             
             processAndRender();
 
         } catch (error) {
-            alert("ERROR CRÍTICO: El archivo no es un JSON válido o la estructura es incorrecta.\n\n" + error.message);
+            alert("ERROR CRÍTICO: " + error.message);
             elements.fileStatus.style.display = 'block';
             elements.fileStatus.innerText = `> ERROR DE LECTURA`;
-            elements.fileStatus.classList.remove('text-acid');
             elements.fileStatus.style.color = 'red';
         }
     };
-    reader.readAsText(file); // Leemos como texto plano para ignorar extensiones
+    reader.readAsText(file);
+}
+
+function extractTextFromChunk(chunk) {
+    // Función auxiliar para sacar texto limpio de cualquier estructura rara del JSON
+    let text = "";
+    if (chunk.parts && Array.isArray(chunk.parts)) {
+        text = chunk.parts.map(p => p.text || "").join("");
+    } else {
+        text = chunk.text || "";
+    }
+    return text.trim();
 }
 
 function processAndRender() {
     if (!rawData) return;
 
-    // 1. Recoger Configuración
+    // 1. Configuración
     const config = {
         userAlias: elements.nameUser.value || "Usuario",
         modelAlias: elements.nameModel.value || "Lucy",
@@ -108,87 +114,115 @@ function processAndRender() {
         headerTemplate: elements.headerText.value
     };
 
-    // 2. Procesar Datos
     const chunks = rawData.chunkedPrompt.chunks;
     let cleanConversation = [];
-    let msgCounter = 0; // Contador global de mensajes visuales (User + Model)
     
-    // Contadores internos para IDs relativos
-    stats.total = 0;
+    // Contadores Independientes
+    let countUser = 0;
+    let countModel = 0;
+
+    // Variables temporales
+    let pendingThought = ""; // Buffer para guardar pensamientos antes de la respuesta
+
+    // ESTADÍSTICAS
+    stats.total_pairs = 0; 
     stats.omitted = 0;
     stats.thoughts = 0;
 
-    // Primero contamos mensajes reales (User/Model) para la lógica de "últimos X"
-    const totalValidMessages = chunks.filter(c => !c.isThought && (c.role === 'user' || c.role === 'model')).length;
-    let currentMsgIndex = 0;
+    // PASO 1: Calcular totales REALES para la lógica de "últimos X"
+    // Contamos cuántas respuestas tiene el modelo (excluyendo pensamientos puros)
+    let totalModelResponses = chunks.filter(c => c.role === 'model' && !c.isThought).length;
 
+    // PASO 2: Procesar
     for (const chunk of chunks) {
-        // Ignoramos bloques que son SOLO pensamiento (nivel superior)
-        if (chunk.isThought) continue;
         
-        if (chunk.role === 'user' || chunk.role === 'model') {
-            msgCounter++;
-            currentMsgIndex++;
-            stats.total++;
-
-            // --- Lógica de Nombres ---
-            const alias = chunk.role === 'user' ? config.userAlias : config.modelAlias;
-            const label = `${alias} ${String(msgCounter).padStart(4, '0')}`;
-
-            // --- Lógica de Omisión (Por ID) ---
-            if (config.omitList.includes(msgCounter)) {
-                cleanConversation.push(`${label}: [MENSAJE OMITIDO]`);
-                stats.omitted++;
-                continue;
+        // --- DETECTAR PENSAMIENTO ---
+        // A veces viene como chunk entero (isThought: true) o dentro de 'parts' con thought: true
+        let isThinkingChunk = chunk.isThought || (chunk.parts && chunk.parts.some(p => p.thought));
+        
+        if (isThinkingChunk) {
+            // Extraemos el texto del pensamiento y lo guardamos en el buffer
+            let thoughtContent = extractTextFromChunk(chunk);
+            if (thoughtContent) {
+                pendingThought += thoughtContent + "\n";
             }
-
-            // --- Extracción de Texto ---
-            let fullText = "";
-            let hasThought = false;
-
-            if (chunk.parts && Array.isArray(chunk.parts)) {
-                // El chunk tiene partes. Aquí es donde pueden estar los pensamientos mezclados.
-                for (const part of chunk.parts) {
-                    // Ver si es un pensamiento interno
-                    const isThoughtPart = part.thought === true; // A veces viene así en el JSON
-
-                    if (isThoughtPart) {
-                        hasThought = true;
-                        // Lógica: ¿Debemos mostrar este pensamiento?
-                        const showFirst = currentMsgIndex <= config.thoughtStart;
-                        const showLast = currentMsgIndex > (totalValidMessages - config.thoughtEnd);
-                        
-                        if (showFirst || showLast) {
-                            // Limpiamos el pensamiento
-                            fullText += `\n[PENSAMIENTO]: ${part.text.trim()}\n`;
-                            stats.thoughts++;
-                        }
-                    } else {
-                        // Texto normal
-                        fullText += part.text || "";
-                    }
-                }
-            } else {
-                // Texto simple sin partes
-                fullText = chunk.text || "";
-            }
-
-            fullText = fullText.trim();
-            if (!fullText && !config.omitList.includes(msgCounter)) continue; // Si está vacío y no fue omitido explícitamente
-
-            cleanConversation.push(`${label}:\n${fullText}`);
+            // NO añadimos nada al array final todavía, esperamos al mensaje real
+            continue; 
         }
-    }
 
-    // 3. Generar Cabecera Dinámica
+        // --- MENSAJES NORMALES ---
+        let role = chunk.role;
+        let currentID = 0; // El número que se mostrará (0001, 0002...)
+        let label = "";
+        let finalMessage = "";
+        let isOmitted = false;
+
+        if (role === 'user') {
+            countUser++;
+            currentID = countUser;
+            label = `${config.userAlias} ${String(currentID).padStart(4, '0')}`;
+            
+            // Si hay un pensamiento "colgando" y cambiamos a usuario, lo borramos (o lo añadimos si quisieras)
+            // Normalmente el usuario no tiene pensamientos en este formato.
+            pendingThought = ""; 
+
+        } else if (role === 'model') {
+            countModel++;
+            currentID = countModel; // Usamos su propio contador
+            label = `${config.modelAlias} ${String(currentID).padStart(4, '0')}`;
+        } else {
+            continue; // Roles desconocidos (system, tool, etc)
+        }
+
+        // --- CHEQUEO DE OMISIÓN ---
+        // Si el usuario pone "1", ocultamos User 1 y Model 1.
+        if (config.omitList.includes(currentID)) {
+            isOmitted = true;
+            stats.omitted++;
+            cleanConversation.push(`${label}:\n[MENSAJE OMITIDO]`);
+            // Limpiamos buffer si se omite
+            pendingThought = ""; 
+            continue;
+        }
+
+        // --- CONSTRUCCIÓN DEL TEXTO ---
+        let mainText = extractTextFromChunk(chunk);
+
+        // Si es Modelo, miramos si hay que inyectar el Pensamiento guardado
+        if (role === 'model' && pendingThought.length > 0) {
+            // Lógica: ¿Debemos mostrarlo?
+            // "Primeros X" -> Si countModel <= config.thoughtStart
+            // "Últimos X" -> Si countModel > (totalModelResponses - config.thoughtEnd)
+            
+            const showFirst = countModel <= config.thoughtStart;
+            const showLast = countModel > (totalModelResponses - config.thoughtEnd);
+
+            if (showFirst || showLast) {
+                finalMessage += `[PENSAMIENTO]:\n${pendingThought}\n[RESPUESTA]:\n`;
+                stats.thoughts++;
+            }
+            // Limpiamos el buffer tras usarlo (o descartarlo)
+            pendingThought = "";
+        }
+
+        finalMessage += mainText;
+
+        // Añadir a la lista
+        cleanConversation.push(`${label}:\n${finalMessage}`);
+    }
+    
+    // Actualizamos stats.total_pairs al mayor de los dos contadores
+    stats.total_pairs = Math.max(countUser, countModel);
+
+    // 3. Cabecera
     let headerFinal = config.headerTemplate
-        .replace('[TOTAL]', stats.total)
+        .replace('[TOTAL]', stats.total_pairs)
         .replace('[OMITIDOS]', stats.omitted)
         .replace('[PENSAMIENTOS]', stats.thoughts);
 
     processedText = headerFinal + "\n\n" + "-".repeat(40) + "\n\n" + cleanConversation.join("\n\n");
 
-    // 4. Renderizar Preview
+    // 4. Render
     elements.previewBox.innerText = processedText;
 }
 
@@ -205,20 +239,13 @@ function downloadTXT() {
 
 function downloadPDF() {
     if (!processedText) return;
-    
-    // Usamos jsPDF
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    
-    // Configuración de fuente monoespaciada básica
     doc.setFont("courier", "normal"); 
     doc.setFontSize(10);
-    
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 10;
     const maxLineWidth = pageWidth - (margin * 2);
-
-    // Separar por líneas para manejar saltos de página
     const splitText = doc.splitTextToSize(processedText, maxLineWidth);
     
     let cursorY = 15;
@@ -230,7 +257,7 @@ function downloadPDF() {
             cursorY = 15;
         }
         doc.text(line, margin, cursorY);
-        cursorY += 5; // Interlineado
+        cursorY += 5;
     });
 
     doc.save(`chat_clean_${Date.now()}.pdf`);
