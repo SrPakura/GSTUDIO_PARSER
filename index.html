@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AERKO_ // LOG_CLEANER</title>
+    
+    <!-- Fuentes (Simulación de Clash Display y JetBrains Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Librería PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="split-screen">
+        
+        <!-- PANEL IZQUIERDO: CONTROLES (Mobile View) -->
+        <section class="control-panel">
+            
+            <header class="panel-header mb-32">
+                <h1 class="h2-title text-acid">LOG_CLEANER</h1>
+                <p class="body-small text-white">/// SYSTEM STATUS: ONLINE</p>
+                <div class="marquee-line mt-small"></div>
+            </header>
+
+            <!-- 1. UPLOAD ZONE -->
+            <div class="cyber-box mb-32" id="drop-zone">
+                <p class="body-label text-acid mb-small">/// 01_INPUT_DATA</p>
+                <div class="upload-area">
+                    <span class="body-base text-white">ARRASTRAR ARCHIVO AQUÍ</span>
+                    <span class="caption text-grey-light mt-small">[ .json o sin extensión ]</span>
+                    <input type="file" id="file-input" class="hidden-input">
+                    <button class="btn-primary mt-medium" onclick="document.getElementById('file-input').click()">SELECCIONAR_ARCHIVO</button>
+                </div>
+                <p id="file-status" class="caption text-acid mt-small" style="display:none;">> ARCHIVO_CARGADO_OK</p>
+            </div>
+
+            <!-- 2. CONFIGURACIÓN -->
+            <div class="cyber-box mb-32 disabled-state" id="config-section">
+                <p class="body-label text-acid mb-small">/// 02_CONFIGURACIÓN</p>
+                
+                <!-- Nombres -->
+                <div class="input-group mb-medium">
+                    <label class="caption text-grey-light">ALIAS_USUARIO</label>
+                    <input type="text" id="name-user" class="cyber-input" value="Usuario">
+                </div>
+                <div class="input-group mb-medium">
+                    <label class="caption text-grey-light">ALIAS_MODELO</label>
+                    <input type="text" id="name-model" class="cyber-input" value="Lucy">
+                </div>
+
+                <!-- Cabecera Personalizada -->
+                <div class="input-group mb-medium">
+                    <label class="caption text-grey-light">CABECERA_PERSONALIZADA</label>
+                    <textarea id="custom-header" class="cyber-input" rows="3" placeholder="Ej: Conversación archivada el 2025...">Esta conversación contiene [TOTAL] mensajes. Omitidos: [OMITIDOS]. Con pensamiento: [PENSAMIENTOS].</textarea>
+                    <p class="caption text-grey-light mt-small" style="font-size: 0.7rem;">Variables: [TOTAL], [OMITIDOS], [PENSAMIENTOS]</p>
+                </div>
+
+                <!-- Filtros Avanzados -->
+                <div class="filter-grid mb-medium">
+                    <div class="input-group">
+                        <label class="caption text-grey-light">OMITIR IDs (ej: 1, 5, 10)</label>
+                        <input type="text" id="omit-ids" class="cyber-input" placeholder="Nº Separados por comas">
+                    </div>
+                </div>
+
+                <!-- Lógica de Pensamientos -->
+                <p class="body-small text-white mb-small">> VISIBILIDAD_PENSAMIENTOS (COT)</p>
+                <div class="thoughts-control mb-medium">
+                    <div class="input-group">
+                        <label class="caption text-grey-light">INCLUIR PRIMEROS (X)</label>
+                        <input type="number" id="thought-start" class="cyber-input" value="0" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label class="caption text-grey-light">INCLUIR ÚLTIMOS (X)</label>
+                        <input type="number" id="thought-end" class="cyber-input" value="0" min="0">
+                    </div>
+                </div>
+                <p class="caption text-grey-light">Si ambos son 0, se eliminan todos los pensamientos.</p>
+
+            </div>
+
+            <!-- 3. EXPORTACIÓN -->
+            <div class="cyber-box disabled-state" id="export-section">
+                <p class="body-label text-acid mb-small">/// 03_EXPORT_DATA</p>
+                <div class="action-row">
+                    <button class="btn-input-white" id="btn-txt">DESCARGAR .TXT</button>
+                    <button class="btn-primary" id="btn-pdf">DESCARGAR .PDF</button>
+                </div>
+            </div>
+
+            <footer class="mt-48 mb-32">
+                <p class="caption text-grey-light">AERKO_ PROTOCOL V.1.0 // LOCAL PROCESSING</p>
+            </footer>
+
+        </section>
+
+        <!-- PANEL DERECHO: PREVIEW (Desktop Only) -->
+        <section class="preview-panel">
+            <div class="preview-header">
+                <span class="blink">_PREVIEW_MODE</span>
+                <span class="caption text-grey-light">:: READ_ONLY</span>
+            </div>
+            <div class="preview-content" id="preview-box">
+                <span class="text-grey-light">> ESPERANDO INPUT DE DATOS...</span>
+            </div>
+        </section>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
