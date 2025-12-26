@@ -1,0 +1,217 @@
+/* =========================================
+   AERKO_ WEB SYSTEM | ADAPTED FOR TOOL
+   ========================================= */
+
+:root { 
+    --white:#FFFFFF; 
+    --grey:#F2F1F4; 
+    --black:#1A1A1A; 
+    --grey-hover:#2F2F2F; 
+    --acid:#CCFF00; 
+    --acid-hover:#DFFF4F; 
+    --font-display:'Chakra Petch', sans-serif; /* Similar a Clash Display */
+    --font-mono:'JetBrains Mono', monospace; 
+    --border-std:1px solid var(--black); 
+    --border-white:1px solid var(--white); 
+    --shadow-hard:4px 4px 0 0 var(--black); 
+    --shadow-white:4px 4px 0 0 var(--white); 
+    --pad-std:1.5rem; 
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background-color:var(--black); color:var(--white); font-family:var(--font-mono); height: 100vh; overflow: hidden; }
+
+/* --- LAYOUT DIVIDIDO --- */
+.split-screen {
+    display: grid;
+    grid-template-columns: 450px 1fr; /* Izquierda fija, Derecha flexible */
+    height: 100vh;
+    width: 100vw;
+}
+
+/* --- PANEL IZQUIERDO (CONTROLES) --- */
+.control-panel {
+    background: var(--black);
+    border-right: 1px solid var(--grey-hover);
+    padding: var(--pad-std);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- PANEL DERECHO (PREVIEW) --- */
+.preview-panel {
+    background: #0a0a0a; /* Un negro más profundo para la terminal */
+    padding: var(--pad-std);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    /* Trama de fondo sutil */
+    background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(204, 255, 0, 0.03) 2px,
+        rgba(204, 255, 0, 0.03) 4px
+    );
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--grey-hover);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    color: var(--acid);
+    font-family: var(--font-mono);
+    font-weight: 700;
+}
+
+.preview-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--white);
+    white-space: pre-wrap; /* Mantiene saltos de línea */
+    padding-right: 1rem;
+}
+
+/* Scrollbar personalizada brutalista */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--black); border-left: 1px solid var(--grey-hover); }
+::-webkit-scrollbar-thumb { background: var(--acid); }
+::-webkit-scrollbar-thumb:hover { background: var(--acid-hover); }
+
+/* --- COMPONENTES UI --- */
+
+/* Títulos */
+.h2-title { font-family: var(--font-display); font-size: 2.5rem; line-height: 1; text-transform: uppercase; font-weight: 700; }
+.body-label { font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; letter-spacing: 1px; }
+
+/* Cajas */
+.cyber-box {
+    border: 1px solid var(--grey-hover);
+    padding: 1.5rem;
+    background: var(--black);
+    transition: all 0.3s ease;
+}
+
+.cyber-box.disabled-state {
+    opacity: 0.3;
+    pointer-events: none;
+    filter: grayscale(1);
+}
+
+/* Upload Area */
+.upload-area {
+    border: 2px dashed var(--grey-hover);
+    padding: 2rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+    background: rgba(255,255,255,0.02);
+}
+
+.upload-area.dragover {
+    border-color: var(--acid);
+    background: rgba(204, 255, 0, 0.1);
+}
+
+.hidden-input { display: none; }
+
+/* Inputs */
+.input-group { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+.cyber-input {
+    background: var(--black);
+    border: 1px solid var(--grey-hover);
+    color: var(--white);
+    padding: 0.8rem;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    outline: none;
+    width: 100%;
+    transition: 0.2s;
+}
+.cyber-input:focus {
+    border-color: var(--acid);
+    box-shadow: 0 0 10px rgba(204, 255, 0, 0.1);
+}
+
+/* Grids de Inputs */
+.thoughts-control { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.action-row { display: flex; gap: 1rem; margin-top: 1rem; }
+
+/* Botones (Heredados y adaptados) */
+.btn-primary {
+    background-color: var(--acid);
+    color: var(--black);
+    border: none;
+    padding: 1rem 1.5rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: var(--shadow-white); /* Sombra blanca sobre fondo negro */
+    transition: transform 0.1s, box-shadow 0.1s;
+    width: 100%;
+}
+.btn-primary:hover { background-color: var(--acid-hover); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 0 var(--white); }
+.btn-primary:active { transform: translate(2px, 2px); box-shadow: 0 0 0 0; }
+
+.btn-input-white {
+    background: var(--white);
+    color: var(--black);
+    border: none;
+    padding: 1rem 1.5rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    transition: 0.2s;
+}
+.btn-input-white:hover { background: var(--grey); }
+
+/* Utilidades Texto */
+.text-acid { color: var(--acid); }
+.text-white { color: var(--white); }
+.text-grey-light { color: #888; }
+.mt-small { margin-top: 0.5rem; }
+.mt-medium { margin-top: 1rem; }
+.mb-small { margin-bottom: 0.5rem; }
+.mb-medium { margin-bottom: 1rem; }
+.mb-32 { margin-bottom: 2rem; }
+.mt-48 { margin-top: 3rem; }
+.blink { animation: blinker 1.5s linear infinite; }
+@keyframes blinker { 50% { opacity: 0; } }
+
+/* Marquee decorativa */
+.marquee-line { height: 1px; background: var(--acid); width: 100%; opacity: 0.5; }
+
+/* --- RESPONSIVE MOBILE (La clave) --- */
+@media (max-width: 900px) {
+    .split-screen {
+        grid-template-columns: 1fr; /* Solo una columna */
+        overflow-y: auto; /* Scroll normal en móvil */
+        height: auto;
+    }
+
+    .preview-panel {
+        display: none; /* OCULTAMOS PREVIEW EN MÓVIL */
+    }
+
+    .control-panel {
+        border-right: none;
+        width: 100%;
+        overflow: visible;
+        padding-bottom: 5rem;
+    }
+
+    body { overflow: auto; }
+}
